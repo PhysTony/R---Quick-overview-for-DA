@@ -1,0 +1,1205 @@
+---
+title: 'Session 1: tidyverse essentials dplyr & tidyr'
+author: "Antonio Huerta Montellano"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+Borrar todas las variables, funciones u objetos guardados en memoria.
+Asimismo, se cierran todas las ventanas abiertas de gráficas.
+
+```{r}
+rm(list = ls()) # Borra todos los objetos (variables, funciones, etc.) que hay en el entorno de trabajo actual
+# ls() enlista todos los objetos que se han creado en la sesión actual
+graphics.off() # Cierra todas las ventanas gráficas abiertas
+```
+
+El siguiente código corresponde a un chunk en el que se establecen las
+configuraciones del script, así como las librerías que importarán.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Cargar librerías
+library(dplyr)
+library(tidyr)
+library(DT)
+library(ggplot2)
+```
+
+A lo largo de esta sesión se empleará una base precargada en `R` llamada *mpg*. Esta base contiene datos sobre distintos modelos de automóviles lanzados al mercado entre el año 1999 y 2008, con la función `help("mpg")` se pude obtener las descripción técnica de esta base.
+
+```{r}
+# Almacenar base en otro objeto, llamado df
+df <-  mpg
+View(df) # Ver tabla
+print(df) # Imprimir tabla en consola
+str(df) # Estructura de la tabla, también sirve para ver la estructura de culaquier objeto o función en R.
+cat("Filas de la tabla: ",nrow(df),"\n") # Filas de la tabla
+cat("Columnas de la tabla: ",ncol(df)) # Columnas de la tabla
+```
+
+## 1.3 Manipular variables (columns) - select(), rename()
+
+### select() - Selección de columnas
+
+Esta función permite seleccionar las columnas de la tabla que le indiquemos. Por ejemplo, extraer las siguientes columnas: *manufacturar*, *model* y *year*.
+
+```{r}
+select(df, manufacturer, model, year)
+
+# df %>% select(manufacturer,model,year)
+```
+
+También se puede guardar la selección en una nueva tabla.
+
+```{r}
+df.car.info <- select(df, manufacturer, model, year)
+head(df.car.info)
+rm(df.car.info)
+```
+
+Se puede indicar con `select()` que se seleccionen todas las columnas, excepto algunas escribiendo "*-*" antes del nombre de la columna. Por ejemplo, quitemos la columna *year* y guardemos el resultado en un nuevo dataframe.
+
+```{r}
+df.no.year <-  select(df, -year)
+head(df.no.year)
+rm(df.no.year)
+```
+
+Si queremos mandar una columna al final de la tabla se puede hacer, poniendo el signo "*-*" antes de la columna y, dentro del mismo `select()`, escribir solo el nombre de la columna. Por ejemplo, mandemos al final de la tabla la columna *model*.
+
+```{r}
+select(df, -model,model)
+
+# Es equivalente al siguiente código:
+# df %>% select(-model,model)
+```
+
+#### Starts_with
+
+Selecciona todas las columnas que empiecen con la cadena de texto indicada. Por ejemplo, seleccionar todas las columnas que empiezan con la letra *m*.
+
+```{r}
+select(df,starts_with("m"))
+```
+
+#### Contains
+
+Selecciona todas las columnas que contienen la cadena de texto indicada. Por ejemplo, seleccionar todas las columnas que contienen la letra *r*.
+
+```{r}
+select(df, contains("r"))
+```
+
+#### Ends_with
+
+Selecciona todas las columnas que terminen con la cadena de texto indicada. Por ejemplo, seleccionar todas las columnas que terminan con la letra *y*.
+
+```{r}
+select(df,ends_with("y"))
+```
+
+#### Combinaciones
+
+Se pueden combinar las instrucciones anteriores para seleccionar columnas bajo criterios más específicos.
+
+Seleccionar las columnas que empiezan con "c" y terminan "y":
+
+```{r}
+select(df, starts_with("c") & ends_with("y"))
+```
+
+Seleccionar las columnas que empiezan con "c" o terminan "y":
+
+```{r}
+select(df, starts_with("c"),ends_with("y"))
+```
+
+Seleccionar la columna *class* y las columnas que contengan la letra "r":
+
+```{r}
+select(df,class,ends_with("r"))
+```
+
+#### Seleccionar por índice
+
+Se puede seleccionar distintos conjuntos de columnas de acuerdo a los índices que se señalen.
+
+```{r}
+select(df,4)
+```
+
+
+Seleccionar de las columnas 2 a la 4 (se tiene que sumar una unidad a la última fila):
+
+```{r}
+select(df, 2:4)
+```
+
+Seleccionar las columnas 2, 5 y 7:
+
+```{r}
+select(df,c(2,5,7))
+```
+
+Seleccionar las últimas cuatro columnas:
+
+```{r}
+select(df,(ncol(df)-3):ncol(df))
+#select(df, 8:11)
+```
+
+También se pueden combinar las instrucciones de selección que se han visto para la función `select()`. Por ejemplo, seleccionar las columnas que comienzan con *m* de las primeras cuatro columnas, extraer la columna *hwy* y seleccionar las columnas con índice 4 y 7:
+
+```{r}
+select(df,1:4 & starts_with("m"), hwy, c(4,7))
+```
+
+Quitar columnas por medio de un vector:
+
+```{r}
+select(df, -all_of(c("hwy","year")))
+```
+
+
+### rename() - Renombrar columnas
+
+Esta función permite cambiar el nombre de las columnas de la tabla que se le indique. Por ejemplo, renombrar *manufacturer* por *mnfc* y *model* por *mod*:
+
+```{r}
+rename(df,
+       mnfc = manufacturer,
+       mod = model)
+```
+
+También se puede renombrar al momento de seleccionar las columnas con `select()`. Repetir lo anterior con este método al seleccionar esas columnas:
+
+```{r}
+select(df,
+       mnfc = manufacturer,
+       mod = model,
+       everything()) 
+
+select(df, manufacturer,model, everything()) %>%
+  rename(
+    mnfc = manufacturer,
+    mod = model
+  )
+```
+
+`everything()` indica a la función `select()` que después de las columnas *mnfc* y *mod* van el resto de columnas de la tabla *df*. La función `select()` también permite reordenar las columnas
+
+## 1.4 mutate(), transmute()
+
+### mutate() - Crear nuevas variables
+
+Esta función permite construir nuevas columnas en la tabla; por defecto, las nuevas columnas se encuentran hasta la derecha de la tabla, es decir, poseen los últimos índices de la columna. Por ejemplo, calcular los galones por milla promedio entre la carretera y la ciudad,
+
+```{r}
+df <- mutate(
+  df,
+  `avg miles per galon` = (cty + hwy)/2
+  )
+print(df)
+```
+
+Crear una columna que indique el nombre del *manufacturador* y *modelo* (columna *car*) y otra que muestre los cilindros y transmisión en una sola fila (columna *cyl / trans*):
+
+```{r}
+df <- mutate(
+  df,
+  car = paste(manufacturer,model, sep=" "),
+  `cyl / trans` = paste(cyl, " cilindros", "/", trans, " transmisión", sep=""),
+  year_model = paste0(model,year)
+  )
+print(df)
+```
+
+### transmute() - Crea nuevas variables y borra el resto
+
+Esta función es parecida a `mutate()` puesto que crea nuevas columnas en la tabla, pero se diferencia en que `transmutate()` solo regresa las nuevas columnas que se construyeron con esta función. Por ejemplo, se
+repiten los ejemplos hechos con `mutate()`:
+
+```{r}
+transmute(
+  df,
+  `avg miles per gallon` = (cty + hwy)/2
+)
+```
+
+```{r}
+transmute(
+  df,
+  car = paste(manufacturer, model, sep = " "),
+  `cyl / trans` = paste(cyl, " cilindros", " / ", trans, " transmisión", sep = "")
+)
+```
+
+Se reinicia la base a como estaba en un inicio para los siguientes temas
+
+```{r}
+# Reiniciar la data
+df <- mpg
+```
+
+## 1.5 Casos de manipulación (filas) - filter(), slice()
+
+### filter() - Extraer filas bajo condiciones
+
+La función `filter()` permite filtrar las filas de una tabla que cumplan la condición, con respecto a sus columnas, que se indiquen en sus parámetros. Por ejemplo, filtrar las columnas donde el modelo haya sido manufacturado por *Audi*:
+
+```{r}
+filter(df, manufacturer == "audi")
+
+# df %>% filter(manufacturer == "audi")
+```
+
+Filtrar aquellos modelos cuyas millas de autopista por galón sean mayores a $30\text{mi}/\text{gal}$:
+
+```{r}
+filter(df, hwy >= 30)
+```
+
+Filtrar los modelos que no hayan sido manufacturados en el año de 1999:
+
+```{r}
+filter(df, year != 1999)
+```
+
+#### Condiciones simultáneas
+
+Se puede indicar que se cumplan dos condiciones a la vez mediante el operador lógico de conjunción, "&". Por ejemplo, filtrar los modelos manufacturados por *Audi* y fabricados en el año 1999:
+
+```{r}
+filter(df, manufacturer == "audi" & year == 1999)
+filter(df, manufacturer == "audi", year == 1999)
+```
+
+Filtrar los modelos que hayan sido manufacturados por *Audi* o *Dodge*:
+
+```{r}
+filter(df, manufacturer == "audi" | manufacturer == "dodge")
+```
+
+Se puede plantear de una forma equivalente. Por ejemplo, filtrar las filas cuyo manufacturador del modelo se encuentre en el conjunto de nombre: Audi y Dodge,
+
+```{r}
+filter(df, manufacturer %in% c("audi","dodge"))
+```
+
+
+# slice() - Extraer filas por su posición
+
+La función `slice()` nos permite filtrar filas de acuerdo a la posición que ocupan en la tabla. Por ejemplo, filtrar las primeras cinco filas:
+
+```{r}
+slice(df, 1:5)
+```
+
+Filtrar las filas desde la 20va hasta la 29va:
+
+```{r}
+slice(df, 20:29)
+```
+
+Filtrar las últimas 10 filas:
+
+```{r}
+slice(df, (nrow(df)-9):nrow(df))
+```
+
+Seleccionar la primera fila, la 45 y la 100
+
+```{r}
+slice(df, c(1,45,100))
+```
+
+
+## 1.6 arrange() - Ordenar filas
+
+La función `arrange()` permite ordenar de forma ascendente o descendente las filas de acuerdo a las columnas que se especifiquen para ordenarlas. 
+
+Si se elige más de una columna, primero ordena la tabla con respecto a la primera columna; luego, si hay distintos valor asociados a un mismo valor con respecto a la primera columna escogida para el orden, entonces ordenará estos datos en el orden especificado en la segunda columna; y así sucesivamente con el resto de las columnas indicadas para ordenar la
+tabla.
+
+Por ejemplo, ordenar la tabla de forma ascedente (orden por defecto) con respecto al año de manufacturación:
+
+```{r}
+arrange(df, year)
+```
+
+De forma descendente con respecto al año:
+
+```{r}
+arrange(df, desc(year))
+```
+
+Ordenar primero por año de forma descendente, luego por el número de cilindros del modelo y, por último, por el tipo de modelo:
+
+```{r}
+arrange(df, desc(year),cyl,class)
+```
+
+## 1.7 distintos / unicos valores por fila en la tabla
+
+Para esta subsección, se crea una nueva tabla con duplicados. Primero se crea un dataframe de tres filas y dos columnas: *nombre* y el *id* del usuario. Posteriormente, se le concatena a este dataframe su segunda fila para que se convierta en una tabla con duplicados:
+
+```{r}
+df.example <- data.frame(
+  id = 1:3,
+  nombre = c("Anton","Anthony","Acomo")
+)
+# Concatenar la segunda fila
+df.example <- bind_rows(df.example, slice(df.example,2))
+# Ordenar la tabla con respecto a la columna id de forma ascendente
+df.example <-  arrange(df.example, id)
+print(df.example)
+```
+
+### distinct() - Obtener solo los valores únicos o distintos
+
+La función `distinct()` devuelve solo las filas que son distintas entre sí con respecto a las columnas de referencia, es decir, elimina los duplicados. Por ejemplo, eliminar la fila duplicada de la tabla `df.example`, es decir, Anthony con id igual a 2:
+
+```{r}
+distinct(df.example)
+```
+
+```{r}
+df.example.col <- data.frame(
+  id = c(1,2,2,3),
+  nombre = c("Anton","Anthony","Acomo","Acomo"),
+  color = c("verde","rojo","verde", "verde")
+)
+# Ordenar la tabla con respecto a la columna id de forma descendente
+df.example.col <-  arrange(df.example.col, desc(id))
+print(df.example.col)
+```
+
+También se pueden obtener los valores distintos con respecto a una o más columnas en particular, en lugar de obtener las filas únicas con respecto a toda las columnas de la tabla. Por ejemplo, obtengamos los valores únicos de la columna de colores:
+
+```{r}
+distinct(df.example.col, color)
+```
+
+Ahora, las filas únicas con respecto al nombre y el color:
+
+```{r}
+distinct(df.example.col, nombre,color)
+```
+
+Consideremos de nuevo la base *mpg*, pero ahora solo las columnas del fabricante (*manufacturer*) y el modelo (*model*):
+
+```{r}
+df.dupl <- select(df, manufacturer, model)
+head(df.dupl)
+```
+
+Se aprecia que es tabla contiene filas duplicadas por lo que se le aplicará la función `distinct()` para obtener solo las filas que sean distintas entre sí:
+
+```{r}
+df.no.dupl <- distinct(df.dupl)
+head(df.no.dupl)
+rm(df.dupl,df.no.dupl)
+```
+
+## 1.8 Seleccionar muestras de tablas
+
+En esta sección se empleará funciones que filtran filas de tablas de forma aleatoria. No obstante, se necesita fijar una *semilla* para que se puedan replicar los mismos resultados ya que estrictamente una computadora no puede *aleatorizar*. Si se empleará en un archivo *rmd* se tiene que poner la semilla en cada chunk donde se busque replicabilidad.
+
+```{r}
+set.seed(567)
+```
+
+### sample_n() - Filtrar n filas de forma aleatoria
+
+Esta función obtiene $n$ filas de la tabla aleatoriamente, con y sin reemplazo. Por ejemplo, obtengamos diez filas de forma aleatoria sin reemplazo. Con reemplazo se refiere a que una misma fila puede aparecer más de una vez en la selección.
+
+```{r}
+set.seed(567)
+sample_n(df, size = 10, replace = FALSE)
+```
+
+Repitamos el ejercicio anterior, pero con reemplazo:
+
+```{r}
+set.seed(567)
+sample_n(df, size = 10, replace = T)
+```
+
+### sample_frac() - Filtrar aleatoriamente fracciones de la tabla
+
+Esta función obtiene de forma aleatoria alguna fracción o porcentaje de las filas de la tabla. Por ejemplo, obtengamos al azar el $10\$$ de las filas de la tablas y sin reemplazo:
+
+```{r}
+set.seed(567)
+sample_frac(df, size = 0.1, replace = F)
+```
+
+## 1.9 Estadísticas descriptivas y generales de las tablas
+
+### summarise() - Resumen estadístico descriptivo
+
+Esta función aplica funciones de estadística descriptiva a las columnas de una tabla y genera una nueva con solo las estadísticas calculadas.
+
+Por ejemplo, obtengamos el promedio de los galones por milla en autopista de todos los modelos en la tanla:
+
+```{r}
+summarise(
+  df,
+  `mean hwy` = mean(hwy)
+)
+```
+
+Ahora, se va a obtener el número de renglones en la tabla, así como el número de modelos de coches distintos en toda la tabla\_
+
+```{r}
+summarise(
+  df,
+  rows = n(),
+  `nr models` = n_distinct(model)
+)
+```
+
+Luego, calculemos el mínimo y máximo tanto de las millas por galón en autopista y ciudad, respectivamente:
+
+```{r}
+summarise(df, 
+          `min hwy` = min(hwy),
+          `min cty` = min(cty),
+          `max hwy` = max(hwy),
+          `max cty` = max(cty))
+```
+
+## 1.10 Agrupamiento de variables
+
+### group_by() - Agrupar datos por variables
+
+Esta función agrupa implícitamente la tabla por una o más columnas. Esto sirve para aplicar posteriormente operaciones por grupo, como puede ser con `summarise()`, la cual se aplica a la totalidad de los datos como un solo grupo, pero al usar `group_by()` las operaciones se aplican a cada grupo que definen las combinación de una o más variables, según se
+especifique. Los grupos son definidos por los valores únicos de la columna que define la agrupación o las combinaciones únicas que definen las columnas por las cuales se está agrupando. Al agrupar no cambia cómo luce la tabla, pero sí el tipo de dato que este almacena, adicional a una leyenda de cuántos grupos se identificaron. Por ejemplo, agrupemos por fabricante:
+
+```{r}
+print(df)
+group_by(df, manufacturer)
+```
+
+### Combinar summarise() & group_by()
+
+Al combinar estas funciones, se pueden obtener estadísticas por grupo. Por ejemplo, mostremos el número de coches por fabricante que hay en la tabla:
+
+```{r}
+summarise(group_by(df, manufacturer),
+          cars = n())
+```
+
+Ahora, la media / mínimo / máximo de las millas por hora en autpista para cada modelo;
+
+```{r}
+summarise(group_by(df, model),
+          mean_hwy = mean(hwy),
+          min_hwy = min(hwy),
+          max_hwy = max(hwy))
+```
+
+### count() - Contar los renglones por grupos
+
+Nos permite obtener el número de filas que define cada grupo en la tabla al combinarse con `group_by()`. Esta función coincide con `n()` que se utilizó en la subsección anterior.
+
+Sin agrupar, obtenemos el número de filas totales en la tabla.
+
+```{r}
+count(df)
+```
+
+Obtengamos el número de registros en la tabla que define cada modelo
+
+```{r}
+count(group_by(df, model))
+```
+
+También se puede relaizar indicándole la columna para sacar el conteo de los valores de observaciones por cada valor distinto.
+
+```{r}
+count(df, manufacturer)
+```
+
+Reiniciemos nuestro dataframe, así como borrar los objetos que hay en memoria.
+
+```{r}
+rm(list = ls())
+df <- mpg
+```
+
+## 1.11 %>% - Operador pivotal
+
+Este operador permite encadenar funciones a un mismo objeto sin necesidad de especificar a qué objeto aplicar cada función como lo estábamos haciendo antes. Cada paso es ejecutado en un *pipeline*. 
+
+Por ejemplo, contemos el número de coche donde el fabricante sea *audi*:
+
+```{r}
+df %>%
+  filter(manufacturer == "audi") %>%
+  count()
+
+# Equivalente a
+# count(filter(df,manufacturer == "audi"))
+```
+
+Filtrar los fabricantes que sean de *dodge* o *chevrolet*, luego selecionar las columnas de fabricante, modelo, año y clase.
+
+```{r}
+df %>%
+  filter(manufacturer %in% c("dodge","chevrolet")) %>%
+  select(manufacturer, model, year, class)
+```
+
+Calculemos el promedio de millas en autopista por galón y número de carros por combinación de fabricante, modelo, clase y tipo de transmisión, posteriormente se tiene que filtrar los promedio mayores a 30 y mostrar los resultados en orden descendente de acuerdo al promedio al promedio de las millas en autopista por galón.
+
+```{r}
+df %>%
+  group_by(manufacturer, model, class, trans) %>%
+  summarise(
+    `mean hwy` = mean(hwy),
+    cars = n()
+  ) %>%
+  ungroup() %>%
+  filter(`mean hwy` > 30) %>%
+  arrange(desc(`mean hwy`))
+
+# Equivalente a:
+# arrange(filter(ungroup(summarise(group_by(df, manufacturer, model, class, trans),`mean hwy` = mean(hwy), cars = n())),`mean hwy` > 30),desc(`mean hwy`))
+```
+
+# 1.12 pivoting - Convertir tablas de formato long a wide y viceverse
+
+Consideremos la siguiente tabla que contiene las siguientes columnas:
+
+-   *id*: Identificador del tipo,
+-   *type*: tipo y
+-   *count*: conteo de los tipos identificados.
+
+```{r} 
+table.long <- data.frame(
+  id = 1:6,
+  type = c("a", "b", "a", "c", "c", "a"),
+  count = c(20, 50, 45, 15, 12, 5)
+)
+table.long
+```
+
+# pivot_wider() - Convertir datos de formato long a wide
+
+Hay veces en las que quisiéramos que nuestras variables de interes no estuvieran condensadas en una sola columna como en el caso del tipo en la tabla de arriba; en su lugar, deseariamos ver la información más desagregada en la misma tabla como separar columnas por cada entidad distinta de nuestra variable de interés (para esos casos suelen ser
+variables categóricas) como tipo, es decir, que *a*, *b* y *c* tengan su propia columna. Cada *tipo* en su propia columna.
+
+En estos casos, se suele utilizar la función `pivot_wider()` para realizar esta tarea de forma eficiente. Se le indica qué columna se va a desagregar y la columna de dónde tomará los valores de referencia para entidad única de la variable de interés.
+
+Por ejemplo, transformemos a formato wide el dataframe *table.long* donde cada entidad única en tipo (*type*) tendrá su propia columna con los valores de su conteo (*count*).
+
+```{r}
+table.wide <- pivot_wider(table.long,
+                          names_from = type,
+                          values_from = count)
+table.wide
+```
+
+# pivot_longer() - Convertir datos de formato wide a long
+
+A veces, queremos hacer el proceso inverso que se describió en la subsección anterior, es decir, querer consdensar distintas columnas que pertenecen a entes similares entre sí. En este caso, se tienen que indicar las columnas que se condesarán, el nombre que tendrá la columna que indicará el nombre de estas entidades, el nombre que tendrá la columna que mostrará los valores de estas entidades y, por último, indicar si se van a omitir los casos *NA*.
+
+Trataremos de regresar a la tabla original, *table.long*, adicionalmente, veamos la diferencia entre considerar o no los casos *NA*. Primero, consideremos esos casos.
+
+```{r}
+table.long1 <- pivot_longer(
+  table.wide,
+  cols = c("a", "b", "c"),
+  names_to = "type",
+  values_to = "count",
+  values_drop_na = F
+)
+table.long1
+```
+
+Ahora, omitamos los casos *NA* para obtener la misma tabla al inicio de esta sección, *table.long*:
+
+```{r}
+table.long2 <- pivot_longer(
+  table.wide,
+  cols = c("a","b","c"),
+  names_to = "type",
+  values_to = "count",
+  values_drop_na = T
+)
+table.long2
+```
+
+### Ejercicio con la tabla de coches
+
+Para este ejercicio, primero filtraremos las tabla para considerar solo a los fabricantes que sean *jeep*, *land rover* o *hyundai*; luego, seleccionar las columnas de modelo, tipo de transmisión y galones por millas de carretera; alcular el promedio de los galones por millas de autopista para cada modelo y tipo de transmisión; esta será nuestra tabla en formato long.
+
+```{r}
+df.long <- df %>%
+  filter(manufacturer %in% c("jeep","land rover", "hyundai")) %>%
+  select(model, trans, hwy) %>%
+  group_by(model, trans) %>%
+  summarise(
+    `mean hwy` = mean(hwy)
+  ) %>%
+  ungroup()
+print(df.long)
+```
+
+Ahora, convirtamos a formato wide el dataframe anteiror, donde cada elemento único del tipo de transmisión definirá una columna por sí misma.
+
+```{r}
+df.wide <- df.long %>%
+  pivot_wider(
+    names_from = trans,
+    values_from = `mean hwy`
+  )
+df.wide
+```
+
+Convirtamos de regreso la tabla *df.wide* a formato long
+
+```{r}
+df.long1 <- df.wide %>%
+  # Se excluyen la columna de modelo puesto que el resto de columnas corresponden al tipo de transmisión
+  pivot_longer(
+    -model,
+    names_to = "trans",
+    values_to = "mean hwy",
+    values_drop_na = T
+    )
+df.long1
+```
+
+# 1.13 - Seperar y unir columnas
+
+Para esta sección crearemos una tabla que contenga fechas diarias que empiecen desde el primero de enero del 2021 hasta el 31 de diciembre del mismo año.
+
+```{r}
+# Generamos la secuencia de fechas diarias
+dates <- seq.Date(
+  from = as.Date("2021-01-01"),
+  to = as.Date("2021-12-31"),
+  by = "day"
+)
+table <- data.frame(date = dates)
+table %>% head(); table %>% tail()
+```
+
+## separate() - Separar alguna columna en múltiples columnas
+
+Esta función nos permite separar alguna columna en más de al separar el contenido de la columna con respecto a algún patrón. 
+
+Por ejemplo, separemos la columna de fecha en las siguientes columnas: year, mes y día, el patrón de referencia es "-".
+
+```{r}
+table.sep <- table %>%
+  separate(data = ., # En este caso no es necesario especificar la data puesto que está el pipe
+           col = date,
+           into = c("year","month","dayofmonth"),
+           sep = "-") %>%
+  arrange(year, month, dayofmonth)
+head(table.sep)
+```
+
+Sin embargo, los números que corresponden a los meses y día del mes no poseen el formato adecuado. Por lo cual, esto se solventa al tranformar esas columnas a tipo numérico ya que este proceso elimina los ceros a la izquierda.
+
+```{r}
+table.sep <- table %>%
+  separate(data = ., # En este caso no es necesario especificar la data puesto que está el pipe. El punto indica que se trabajará con la tabla que se le aplicó el operador `pipeline`
+           col = date,
+           into = c("year","month","dayofmonth"),
+           sep = "-") %>%
+  mutate(
+    month = as.numeric(month),
+    dayofmonth = as.numeric(dayofmonth)
+  ) %>%
+  arrange(year, month, dayofmonth)
+head(table.sep)
+```
+
+Este código se puede simplificar al usar `across()` y `mutate()`:
+
+```{r}
+table.sep <- table %>%
+  separate(data = ., # En este caso no es necesario especificar la data puesto que está el pipe. El punto indica que se trabajará con la tabla que se le aplicó el operador `pipeline`
+           col = date,
+           into = c("year","month","dayofmonth"),
+           sep = "-") %>%
+  mutate(across(
+    c("month","dayofmonth"),
+    ~.x %>% as.numeric() #es equivalente a escribir ~as.numeric(.x)
+  )) %>%
+  arrange(year, month, dayofmonth)
+head(table.sep)
+```
+
+Antes, se usaban otras funciones como `mutate_at()`. Sin embargo, ya no se suelen usar puesto que hay funciones como `across()` que también pueden realizar las tareas de `mutate_at()`, entre otras funciones que provee la librería de *tidyr*.
+
+```{r}
+table.sep.example <- table %>%
+  separate(
+    data = .,
+    col = date,
+    into = c("year","month","dayofmonth"),
+    sep = "-"
+    ) %>%
+  mutate_at(
+    .tbl = .,  # ¿qué tabla? -> "." indica que es la tabla en el pipeline
+    .vars = c("month","dayofmonth"),  # ¿qué variables se les aplicará la función?
+    .funs = as.numeric  # ¿qué función se aplicará?
+  ) %>%
+  arrange(year,month,dayofmonth)
+tail(table.sep.example)
+```
+
+## unite() - Combina múltiples columnas en una sola
+
+Esta función hace la tarea contraria a `separate()` puesto que ahora combinamos distintas columnas en una sola, en lugar de separarlas. Como ejemplo, regresaremos la tabla de la subsección anterior (*table.sep*) a la tabla original (*table*).
+
+install.packages("stringr") library(stringr)
+
+```{r}
+# Para añadir los ceros a la izquierda en las columnas de mes y día, se instalará la librería `stringr`
+#install.packages("stringr")
+library(stringr)
+
+table.unite <- table.sep %>%
+  # Añadir los ceros a la izquierdad, en orden, se tienen que especificar los siguientes parámetros: columna que se modificará, el tamaño que tendrá cada texto dentro de la columna, de qué lado se agregará texto y, por último, qué texto se va a agregar
+  mutate(
+    month = str_pad(month, width=2, side="left", pad="0"),
+    dayofmonth = str_pad(dayofmonth, width=2, side="left", pad="0")
+  ) %>%
+  unite(
+    data = ., # No es necesario especificar qué datos se ocupan puesto que toma los datos del pipeline
+    col = "date",
+    year,month,dayofmonth,
+    sep="-"
+  ) %>%
+  arrange(date)
+head(table.unite)
+```
+
+De manera análoga a la subsección anterior, se puede hacer de manera más eficiente con `across()` o `mutate_at()`. Lo realizaremos con la primera opción.
+
+```{r}
+table.unite <- table.sep %>%
+  mutate(across(
+    c("month","dayofmonth"),
+    ~.x %>% str_pad(width=2, side="left", pad="0")
+  )) %>%
+  unite(
+    col = "date",
+    year,month,dayofmonth,
+    sep = "-"
+  ) %>%
+  arrange(date)
+head(table.unite)
+```
+
+El ejemplo anterior con `mutate_at()` queda de la siguiente forma:
+
+```{r}
+table.unite <- table.sep %>%
+  mutate_at(
+    vars(month, dayofmonth),
+    ~ str_pad(.x, width = 2, side = "left", pad = "0")
+  ) %>%
+  unite(
+    col = "date",
+    year, month, dayofmonth,
+    sep = "-"
+  ) %>%
+  arrange(date)
+
+head(table.unite)
+```
+
+
+# 1.14 dplyr & tidyr en acción
+
+## pull() - Extraer elementos como vector
+
+Esta función permite extraer columnas de un dataframe como vector. Por ejemplo, obtengamos la columna de galones por milla de autopista:
+
+```{r}
+hwy.lista <- df %>% pull(hwy)
+cat("Tipo de dato: ", hwy.lista %>% class())
+```
+
+En el ejemplo anterior, se indicó en el parámetro de la función `pull()` la columna a extraer. Sin embargo, también se puede filtrar con `select()`; no es que una forma de hacerlo sea mejor que la otra, sino que se usan dependiendo de lo que se quiera hacer puesto que hay casos donde una forma simplifica más el trabajo que la otra o se ve más legible el código como veremos en el ejemplo del entero que se extrae de la primera fila de la columna *hwy*.
+
+```{r}
+hwy.lista <- df %>% select(hwy)
+cat("Tipo de dato: ", hwy.lista %>% class())
+rm(hwy.lista)
+```
+
+En el siguiente ejemplo se extrae el valor de la primera fila de la misma columna del ejemplo anterior.
+
+```{r}
+hwy.integer <- df %>% select(hwy) %>% slice(1) %>% pull()
+cat("Valor en la primera fila: ",hwy.integer,"\nTipo de dato: ", hwy.integer %>% class())
+rm(hwy.integer)
+```
+
+## Combinar mutate() & group_by()
+
+Al combinar estas funciones, calcular estadísticas por grupo sin perder o resumir la estructura de la tabla original, a diferencia de `summarise()` que solo regresa las estadísticas calculadas al combinarse con `group_by()` y una única fila por cada grupo distinto, al usar `mutate()` se conservan todos los registros originales. 
+
+Por ejemplo, obtengamos el promedio de los galones por milla en autopista de cada fabricante-modelo distinto:
+
+```{r}
+cat("Dimensiones antes de obtener el promedio: ",dim(df),"\n")
+df <- df %>%
+  group_by(manufacturer,model) %>%
+  mutate(
+    `mean hwy` = mean(hwy)
+  ) %>%
+  ungroup()
+print(df %>% select(`mean hwy`,everything()))
+cat("\nDimensiones después de obtener el promedio: ",dim(df))
+```
+
+## case_when() - case when statements
+
+A partir de esta función se puede crear columnas condicionales, es decir, que el contenido de esta columna se construye a partir del valor de otras columnas o valores que cumplen ciertas condiciones o casos.
+
+Algunas aplicaciones pueden ser en crear una columna de categorías o grupos de valores asociados a los valores de otras columnas; crear una columna numérica que aplique distintas operaciones matemáticas a partir de otra columna, donde las aplicaciones se aplicarán según el valor del número; etc.
+
+Por ejemplo, obtengamos una nueva columna, `transmission type`, que diga el tipo de transmisión, es decir, si es automática o manual. Para este ejemplo, crearemos una columna auxiliar, `trans_`, que contiene solo el primer caracter de los datos en la columna de las transmisión.
+
+```{r}
+df <- df %>% 
+  # Extrae la primera letra de las entradas de la columna trans
+  mutate(
+    trans_ = str_sub(string = trans, start = 1, end =1)
+  ) %>% 
+  mutate(
+    `transmission type` = case_when(
+      trans_ == "a" ~ "automatic",
+      trans_ == "m" ~ "manual",
+      TRUE ~ "NA"
+    )
+  ) %>%
+  select(-trans_)
+
+df %>% count(`transmission type`, trans)
+```
+
+`TRUE ~ "NA"` indica que será asignado un `NA` en caso de que ningún valor de la columna `trans_` sea igual a *a* o *m*.
+
+Podemos añadir un id general para identificar los carros a lo largo de toda la tabla con la función `row_number`, esta función devuelve el número de renglón que ocupa la observación, es útil para construir rangos.
+
+```{r}
+# id not considering groups
+df <- df %>%
+  mutate(
+    `car id` = row_number()
+  )
+print(df)
+```
+
+Asimismo, con la función `group_by` se puede crear un id para los carros, pero que solo sirva para identificarlos por fabricante y no a lo largo de toda la base de datos.
+
+```{r}
+# id consudering groups (per manufacturer)
+df <- df %>%
+  group_by(manufacturer) %>%
+  mutate(
+    `car id1` = row_number()
+  ) %>%
+  ungroup()
+
+print(df)
+```
+
+## Información de vuelos
+
+Para los siguientes ejemplo se utilizará una base de datos que tiene información detallada sobre vuelos. Para esto, se tiene que cargar la librería `hflights`
+
+```{r}
+library(hflights)
+
+df <- hflights
+head(df)
+```
+
+Contemos el número de filas y columnas que tiene la base de datos
+
+```{r}
+cat("El número de vuelos registrados es: ",nrow(df), "vuelos, mientras que tiene un total de ",ncol(df), " columnas.")
+```
+
+También, se cuentan el número de vuelos distintos que hay en la tabla de vuelos
+
+```{r}
+df %>%
+  count(UniqueCarrier, FlightNum, TailNum, Year, Month, DayofMonth)
+```
+
+Columnas que empiezan con la palabra "Taxi"
+
+```{r}
+df %>%
+  select(starts_with("Taxi"))
+```
+
+Veamos cuántos vuelos hubieron con una distancia menor a las mil millas mayor o igual que mil millas. Para esto, creamos una categoría para los vuelos dependiendo de la distancia que recorrieron y luego contamos los vuelos por categoría.
+
+```{r}
+df %>%
+  mutate(
+    dist1000 = case_when(
+      Distance < 1000 ~ "Distancia < 1000",
+      Distance >= 1000 ~ "Distancia >= 1000"
+    )
+  ) %>%
+  count(dist1000)
+```
+
+Ahora, contemos el número de vuelo por aerolinea y ordenemos el conteo de mayor a menor, El nombre por defecto que se crea en la columna de conteo es *n*.
+
+```{r}
+df %>%
+  group_by(UniqueCarrier) %>%
+  count() %>%
+  ungroup() %>%
+  arrange(desc(n))
+```
+
+Por otro lado, obtengamos el número de vuelos por aerolínea que fueron cancelados de mayor a menor. Si el vuelo fue cancelado, la columna `Cancelled` tendrá un valor igual a 1.
+
+Para este ejemplo, asociaremos un nombre de distinto a la columna de conteo, *Vuelos cancelados*; se indica el nombre mediante el parámetro *name*.
+
+```{r}
+df %>%
+  filter(Cancelled == 1) %>%
+  group_by(UniqueCarrier) %>%
+  count(name = "Vuelos cancelados") %>%
+  ungroup() %>%
+  arrange(desc(`Vuelos cancelados`))
+```
+
+A continuación, calcularemos el porcentaje de vuelos cancelados por aerolínea
+
+```{r}
+df %>%
+  group_by(UniqueCarrier,Cancelled) %>%
+  count(name = "Número de vuelos") %>%
+  ungroup() %>%
+  group_by(UniqueCarrier) %>%
+  mutate(
+    Porcentaje = 100 * round(`Número de vuelos` / sum(`Número de vuelos`), 4)
+  ) %>%
+  ungroup() %>%
+  filter(Cancelled == 1)
+```
+
+Creemos una columna fecha en formato "Año-mes-día". Sin embargo, en las fechas el mes y el día tienen siempre dos dígitos, es decir, nunca vemos una fecha *1899-1-22*, sino *1899-01-22*.
+
+```{r}
+df %>% select(Year,Month,DayofMonth)
+```
+
+Por lo tanto, ocuparemos de la función `str_pad()` para realizar esta tarea, se le tiene que indicar la columna a la que se le aplicará esta función, cuántos caracteres tiene que tener cada una de las entradas de la columna, si se acompletarán los caracteres por la izquierda o derecha, y el texto con el que se completarán las entradas de la columna. Asimismo, se empleará la la función `across()` con `mutate()` para aplicar la función `str_pad()` a más de una columna a la vez. La sintaxis es la siguiente:
+
+
+```
+across(.cols, .fns, .names = NULL)
+```
+
+donde
+
+| Argumento  | Descripción                                                                                                                                   |
+|------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `.cols`    | Columnas a transformar. Puede usarse `where()`, `starts_with()`, nombres directos, etc.                                                      |
+| `.fns`     | Función o funciones a aplicar. Puede ser una función como `log`, una fórmula como `~ .x * 100`, o una lista de funciones.                    |
+| `.names`   | (Opcional) Especifica el nombre de las nuevas columnas. Usa `"col"` como plantilla, por ejemplo: `"{col}_mod"` generará `col1_mod`, etc.     |
+
+A continuación se aplican las funciones anteriormente descritas arriba para construir la columna de fechas
+
+```{r}
+df %>%
+  mutate(across(
+    .cols = c("Month","DayofMonth"),
+    .fns = ~ str_pad(.x, 2,"left", "0")
+  )) %>%
+  unite(
+    col = "Fecha",
+    Year,Month,DayofMonth,
+    sep="-"
+  )
+```
+
+Ahora, obtengamos el número de vuelos, por aerolínea, cancelados de acuerdo a los códigos de cancelación, `CancellationCode`. Sin embargo, se puede apreciar que hay códigos de cancelación sin clave
+
+```{r}
+df %>%
+  count(CancellationCode)
+```
+Aosicaremos el código *0* a estos vuelos sin código para posteriormente contar el número de vuelos cancelados por código y aerolínea
+
+```{r}
+df_cancelled_carrier <- df %>%
+  mutate(
+    CancellationCode = case_when(
+      CancellationCode == "" ~ "0",
+      TRUE ~ CancellationCode
+    )
+  ) %>%
+  group_by(UniqueCarrier,CancellationCode) %>%
+  count() %>%
+  ungroup()
+
+print(df_cancelled_carrier)
+```
+
+En el código anterior se usa `TRUE ~ CancellationCode` para indicar que en caso de que no ocurra que el valor sea igual al *string* vacío "", entonces devuelve el mismo valor.
+
+Por último, tenemos que pasar a un formato *wide* para mostar de una mejor manera los datos por aerolínea. Como no todas las aerolineas tienen registrados los mismos códigos o siquiera tener vuelos cancelados con ese código, entonces al pasar la tabla a formato wide, saldrán valores *NA* por lo que se tendrá que rellenar estos valores con ceros puesto que indicaría que no hay vuelos cancelados con ese código.
+
+```{r}
+df_cancelled_carrier <- df_cancelled_carrier %>%
+  pivot_wider(
+    names_from = "CancellationCode",
+    values_from = "n",
+    values_fill = 0
+  )
+
+print(df_cancelled_carrier)
+```
+
+# Participación de empresas
+
+El siguiente ejemplo muestra cómo obtener la participación en el mercado de un empresa multiproducto donde nos interesa la particiáción de cada empresa por producto. Consideremos la siguiente tabla que contiene los datos sobre las ventas de tres empresas en tres productos distintos.
+
+```{r}
+# Crear el dataframe
+ventas_df <- tibble(
+  empresa = c(
+    "Empresa_A", "Empresa_A", "Empresa_A", "Empresa_A",
+    "Empresa_B", "Empresa_B", "Empresa_B",
+    "Empresa_C", "Empresa_C", "Empresa_C", "Empresa_C"
+  ),
+  producto = c(
+    "Producto_1", "Producto_1", "Producto_2", "Producto_3",  # Empresa_A repite Producto_1
+    "Producto_1", "Producto_3", "Producto_3",                # Empresa_B repite Producto_3
+    "Producto_1", "Producto_1", "Producto_2", "Producto_4"   # Empresa_C repite Producto_1
+  ),
+  venta = c(
+    1000, 1200, 1500, 2000,  # Montos diferentes para Empresa_A
+    1100, 2100, 2200,        # Montos diferentes para Empresa_B
+    1300, 1400, 1600, 1800   # Montos diferentes para Empresa_C
+  )
+)
+
+print(ventas_df)
+```
+
+Importe total por empresa y producto
+
+```{r}
+ventas_df <- ventas_df %>%
+  group_by(empresa,producto) %>%
+  # Venta total de producto por empresa
+  mutate(
+    venta.producto.empresa.total = sum(venta)
+  ) %>%
+  ungroup() %>%
+  # Venta total y media del producto en toda la tabla
+  group_by(producto) %>%
+  mutate(
+    venta.producto.total = sum(venta)
+  ) %>%
+  ungroup() %>%
+  # Participación de la empresa por producto en el mercado
+  mutate(participacion.producto = round(100*venta.producto.empresa.total/venta.producto.total,2))
+print(ventas_df)
+```
+
+# Ejercicios
+
+## Ejercicio 1
+
+En este ejercicio utilizarás el conjunto de datos `hflights` del paquete `hflights`.
+
+Usa `dplyr` y `tidyr` para responder las siguientes preguntas:
+
+- ¿Cuántas filas y columnas tiene la tabla `hflights`?
+- ¿Cuántos aerolíneas (carriers) distintos aparecen en la tabla? (Imprime una tabla con los nombres de los aerolíneas distintos).
+- ¿Cuáles y cuántos aeropuertos estuvieron involucrados? ¡Considera tanto los aeropuertos de origen como los de destino!
+- ¿Cuántos vuelos fueron cancelados?
+
+## Ejercicio 2
+
+### Primera parte:
+
+Produce una tabla con las siguientes estadísticas por aerolínea:
+
+- Número de vuelos por aerolínea
+- Distancia total volada (en millas) por aerolínea
+- Tiempo total real transcurrido (en horas) por aerolínea
+- Tiempo total en el aire (en horas) por aerolínea
+- Distancia promedio por vuelo para cada aerolínea
+- Tiempo promedio real transcurrido (en horas) por vuelo para cada aerolínea
+- Tiempo promedio en el aire (en horas) por vuelo para cada aerolínea
+
+### Segunda parte:
+
+Calcula el porcentaje de la distancia total volada por los **3 aerolíneas con mejor desempeño** en comparación con la distancia total volada por los aerolíneas restantes. Ejecuta los siguientes pasos:
+
+1. Ordena los aerolíneas por distancia total volada.
+2. Agrupa a los 3 con mejor desempeño en un grupo, y a los demás en otro grupo.
+3. Para cada grupo, calcula la distancia total volada.
+4. Para cada grupo, calcula el porcentaje:  
+   \[\text{Distancia total volada por grupo} / \text{Distancia total volada por todos los aerolíneas}\]
+
+
+# Ejercicio 3
+
+Modifica tu tabla principal de vuelos (`flights`):
+
+- Crea una columna de **fecha** uniendo las columnas: `year`, `month` y `day`.
+- Al unir las columnas, **no pierdas las columnas originales** (puedes duplicarlas con nombres ligeramente distintos antes de ejecutar `unite`).
+- Deberás **parsear** la columna de fecha después de la operación de unión.
+- También debes **agregar ceros a la izquierda** en las columnas de mes y día antes de crear la fecha.
+- Crea las columnas: **trimestre** (`quarter`) y **semana** (`week`).
+
+> 💡 **Sugerencia**: puedes usar los paquetes del `tidyverse` como `lubridate` (para manipulaciones de fecha y hora) y `stringr` (para manipulaciones con cadenas de texto).
+
+
+Usando tu tabla modificada, intenta responder las siguientes preguntas:
+
+- ¿El número total de vuelos está aumentando o disminuyendo **trimestralmente**?
+- ¿La distancia total volada está aumentando o disminuyendo **mensualmente**?
+- 💡 **Pista**: la función `lag()` de `dplyr` puede ayudarte a calcular las diferencias trimestrales o mensuales.
+
+# Ejercicio 4
+
+La idea de este último ejercicio es una tarea de transformación de datos, en la que deberás usar una técnica llamada **"pivotar"**. Construye una tabla que se asemeje a un **mapa de calor** siguiendo estos pasos:
+
+- Para cada **aerolínea (carrier)** y **mes**, calcula el **número total de vuelos**.
+- Luego, **normaliza** el número total de vuelos (divide cada valor entre el número máximo de vuelos total; ¡debes obtener valores entre 0 y 1!).
+- Ahora **transforma (pivot)** tu tabla de formato **largo a ancho**.
+- Cada fila debe representar una **aerolínea**, y cada columna un **mes**.
+- Los valores en las celdas serán el número **normalizado de vuelos**.
+
+Ejemplo esperado de salida:
+
+| Carrier    | Mes 1  | Mes 2  | ... | Mes 12 |
+|------------|--------|--------|-----|--------|
+| Carrier 1  | x1;1   | x1;2   | ... | x1;12  |
+| Carrier 2  | x2;1   | x2;2   | ... | x2;12  |
+| ...        | ...    | ...    | ... | ...    |
+| Carrier n  | xn;1   | xn;2   | ... | xn;12  |
+
+Donde `xᵢⱼ` representa el valor **normalizado** del total de vuelos para la aerolínea `i` en el mes `j`.
+.
