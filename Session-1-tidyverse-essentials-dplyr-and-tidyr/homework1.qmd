@@ -369,8 +369,6 @@ La función `distinct()` devuelve solo las filas que son distintas entre sí con
 distinct(df.example)
 ```
 
-Se crea una tabla similar a la anterior, pero ahora contine una columna con el color favorito de la persona en cuestión.
-
 ```{r}
 df.example.col <- data.frame(
   id = c(1,2,2,3),
@@ -735,8 +733,6 @@ table.sep <- table %>%
 head(table.sep)
 ```
 
-A continuación, se construirá una tabla para dar otro ejemplo de cómo aplicar la función `separate()`, con otro caracter como separador, " , ".
-
 ```{r}
 # Generamos la secuencia de fechas diarias
 ejemplo.separar <- data.frame(
@@ -746,8 +742,6 @@ ejemplo.separar <- data.frame(
 
 ejemplo.separar
 ```
-
-Se separa la columna *letras* en dos columnas.
 
 ```{r}
 ejemplo.separar %>%
@@ -797,9 +791,9 @@ tail(table.sep.example)
 
 Esta función hace la tarea contraria a `separate()` puesto que ahora combinamos distintas columnas en una sola, en lugar de separarlas. Como ejemplo, regresaremos la tabla de la subsección anterior (*table.sep*) a la tabla original (*table*).
 
-```{r}
-# install.packages("stringr") library(stringr)
+install.packages("stringr") library(stringr)
 
+```{r}
 # Para añadir los ceros a la izquierda en las columnas de mes y día, se instalará la librería `stringr`
 #install.packages("stringr")
 library(stringr)
@@ -954,368 +948,6 @@ df <- df %>%
 print(df)
 ```
 
-
-# Reframe()
-
-La función `reframe()` en **R**, perteneciente al paquete `dplyr`, se utiliza para reconstruir un nuevo dataframe a partir de operaciones sobre grupos definidos por `group_by()`, permitiendo que cada grupo devuelva **una o más filas**.
-
-A diferencia de `mutate()`, que **modifica o agrega columnas sin alterar el número de filas del dataframe original**, `reframe()` puede **cambiar el número de filas por grupo** en función del resultado de las operaciones aplicadas.
-
-También se diferencia de `summarise()`, en que esta última siempre colapsa cada grupo en **una sola fila** agregada, mientras que `reframe()` ofrece mayor flexibilidad al permitir operaciones que generan **múltiples filas por grupo**.
-
-Esto la hace ideal para tareas como:
-
-- Expandir listas
-- Replicar observaciones
-- Generar resultados detallados por grupo que van más allá de simples agregaciones
-
-Repitamos alguno de los ejemplos que hemos visto en esta sección donde se obtiene el tiempo total de vuelo y distancia recorrida por aerolinea.
-
-```{r}
-df %>%
-  group_by(UniqueCarrier) %>%
-  summarise(
-    `Tiempo de vuelo` = sum(AirTime, na.rm = T),
-    Distancia = sum(Distance)
-  )
-```
-
-con `reframe()` se obtiene el mismo resultado
-
-```{r}
-df %>%
-  group_by(UniqueCarrier) %>%
-  reframe(
-    `Número de fila por aerolinea` = paste(UniqueCarrier, TailNum, sep = " - ")
-  )
-```
-
-Sin embargo, también se pueden obtener resultados parecidos a `transmutate con across`
-
-```{r}
-df %>%
-  group_by(UniqueCarrier) %>%
-  reframe(
-    `Tiempo de vuelo` = sum(AirTime, na.rm = T),
-    Distancia = sum(Distance)
-  )
-```
-
-
-# Across()
-
-Hemos empleado esta función desde apartados previos y sabemos, en general, para qué funciona, para aplicar una o más cálculos a un conjunto de coluymnas. La sintaxis es la siguiente:
-
-```
-across(.cols, .fns, .names = NULL)
-```
-
-donde
-
-| Argumento  | Descripción                                                                                                                                   |
-|------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| `.cols`    | Columnas a transformar. Puede usarse `where()`, `starts_with()`, nombres directos, etc.                                                      |
-| `.fns`     | Función o funciones a aplicar. Puede ser una función como `log`, una fórmula como `~ .x * 100`, o una lista de funciones.                    |
-| `.names`   | (Opcional) Especifica el nombre de las nuevas columnas. Usa `"col"` como plantilla, por ejemplo: `"{col}_mod"` generará `col1_mod`, etc.     |
-
-## reframe() y across()
-
-```{r}
-mpg <- ggplot2::mpg
-
-mpg
-```
-
-Contar valores únicos en cada columna del datraframe
-
-```{r}
-mpg %>% 
-  reframe(across(
-    .cols = everything(), # qué columnas: todas las columnas
-    .fns = n_distinct  # qué función: contar valores distintos/únicos
-  ))
-```
-
-Calcular medias para columnas *displ*, *cty* y *hwy*. (lista de columnas):
-
-```{r}
-mpg %>% 
-  reframe(across(
-    c(displ, cty, hwy),
-    mean
-  ))
-```
-
-Calcular la mediana de todas las columnas numéricas. En este caso usaremos el método *where()*, ya que nos permite seleccionar columnas basado en alguna condución.
-
-```{r}
-mpg %>% 
-  reframe(across(
-    where(is.numeric),
-    median
-  ))
-```
-
-Calcular valores distintos de columnas de tipo texto
-
-```{r}
-mpg %>% 
-  reframe(across(
-    where(is.character),
-    n_distinct
-  ))
-```
-
-## Aplicar múltiples funciones
-
-Para aplicar más de una función sobre múltiples columnas se tiene que indicar cada función dentro de una lista con la siguiente notación
-
-```
-list(
-  fn_col1 = ~function1(.x, resto de parámetros),
-  fn_col2 = ~function2(.x, resto de parámetros),
-  ...
-  fn_colN = ~functionN(.x, resto de parámetros)
-)
-```
-
-Calcular media y mediana de todas las columnas numéricas
-
-```{r}
-mpg %>% 
-  summarise(across(
-    where(is.numeric),
-    list(
-      avg = ~mean(.x, na.rm = T),
-      med = ~median(.x, na.rm = T)
-    )
-  ))
-```
-
-También se puede hacer lo anterior creando la lista previamente
-
-```{r}
-avgmed <- list(
-  avg = ~mean(.x, na.rm = T),
-  med = ~median(.x, na.rm = T)
-)
-
-mpg %>% 
-  summarise(across(
-    where(is.numeric),
-    avgmed
-  )) 
-```
-
-En los ejemplos anteriores se aprecia que el nombre que tiene cada columna se crea tomando el nombre asociado a *fn_colN* como sufijo, pero podemos controlar esto mediante el parámetro de *.names*. Cuando solo se aplica una función, se deja el nombre original de la columna a la que se le aplica.
-
-- .fn indica el nombre de la columna *fn_col* que se asoció al cálculo de la columna.
-- .col es el nombre de la columna original
-
-```{r}
-mpg %>% 
-  summarise(across(
-    where(is.numeric),
-    avgmed, 
-    .names = "{.fn}:{.col}" # El nuevo nombres es el nombre asociado al cálculo seguido de ":" y luego del nombre original de la columna
-  ))
-```
-
-Se puede usar múltiples condiciones dentro de un where. Por ejemplo, cálculemos la mediana de las columnas que sean numéricas y cuyo nombre termine con *y*.
-
-```{r}
-mpg %>% 
-  summarise(across(
-    where(is.numeric) & ends_with("y"),
-    median
-  ))
-```
-
-## Reframe(), group_by() y across()
-
-Calcular la suma de todas las columnas numéricas desglosado por modelo de auto
-
-```{r}
-mpg %>% 
-  group_by(model) %>% 
-  reframe(across(
-    where(is.numeric),
-    sum
-  ))
-```
-
-Calcular la media de columnas seleccionadas desglosado por fabricante y modelo
-
-```{r}
-mpg %>% 
-  group_by(manufacturer, model) %>% 
-  reframe(across(
-    c(displ, cty, hwy),
-    mean
-  ))
-```
-
-## mutate() & across()
-
-Redondear hacia arriba todas las columnas numéricas. También se puede adoptar la notación explícita para aplicar las funciones a las columnas, independientemente de si se quiere aplicar una o más funciones. Por ejemplo, se aplica la función techo para rendondear hacia arriba cualquier columna numérica.
-
-```{r}
-mpg %>% 
-  mutate(across(
-    where(is.numeric),
-    ~ceiling(.x)
-  ))
-```
-
-Convertir a mayúsculas todas las columnas de texto
-
-```{r}
-mpg %>% 
-  mutate(across(
-    where(is.character),
-    ~str_to_upper(.x)
-  ))
-```
-
-Se puede aplicar la funci[on techo y luego elevar al cuadrado el término resultante usando la notación explícita y el operador pipe, cabe aclarar que solo se usa un *~* por cada columna que se creará
-
-```{r}
-mpg %>% 
-  mutate(across(
-    where(is.numeric),
-    ~ (.x %>% ceiling())^2
-  ))
-```
-
-Usando la notación sin el pipe
-
-```{r}
-mpg %>% 
-  mutate(across(
-    where(is.numeric),
-    ~ (ceiling(.x))^2
-  ))
-```
-
-Ahora, a las columnas de texto se convierten a mayúscula y se completan las entradas a una longitud de 15 caractéres usando el símbolo "-" y por la derecha
-
-```{r}
-mpg %>% 
-  mutate(across(
-    where(is.character),
-    ~.x %>% str_to_upper() %>% str_pad(5, "right", "-")
-  ))
-```
-
-Sin el operador pipe se vuelve complicado de leer conforme más funciones anidadas se tengan
-
-```{r}
-mpg %>% 
-  mutate(across(
-    where(is.character),
-    ~str_pad(str_to_upper(.x),5, "right", "-")
-  ))
-```
-
-## mutate() ~ group_by() & across()
-
-Calcular la media de todas las columnas numéricas, excepto *year*, por fabricante de auto y agregar el sufijo *avg_manufacturer* a las nuevas columnas calculadas.
-
-```{r}
-mpg %>% 
-  group_by(manufacturer) %>% 
-  mutate(across(
-    where(is.numeric) & -year,
-    ~mean(.x, na.rm = T),
-    .names = "{.col}_avg_manufacturer"
-  )) %>% 
-  ungroup()
-```
-
-# if_any() / if_all() con filter()
-
-Es análogo a la función *across*, pero se dividen en dos casos
-
-- if_any() : conserva filas donde la condición es verdadera para al menos una de las columnas seleccionadas
-- if_all() : conserva filas donde la condición es verdadera para todas las columnas seleccionadas
-
-Estas funciones nos sirven para aplicar una o más condiciones a las filas de un conjunto de columnas a la vez.
-
-Para este apartado, se usará la base de datos de *Star Wars* con la descripción física de los personajes de las películas.
-
-```{r}
-starwars <- dplyr::starwars 
-starwars
-```
-
-Con el operador *?* se puede consultar la documentación de la función
-
-```{r}
-?starwars
-```
-
-Filtrar filas donde al menos una columna no tenga NA
-
-```{r}
-starwars %>% 
-  filter(if_any(
-    .cols = everything(),
-    .fns = ~ !is.na(.x)
-  ))
-```
-
-Filtrar filas donde todas las columnas no tengan NA
-
-```{r}
-starwars %>% 
-  filter(if_all(
-    .cols = everything(),
-    .fns = ~ !is.na(.x)
-  ))
-```
-
-Filtrar filas donde "cty" o "hwy" sean mayores a 20. Para esto, usaremos la notación explícita de función, como en across.
-
-```{r}
-mpg %>% 
-  filter(if_any(
-    c(cty, hwy),
-    ~ .x > 20
-  )) 
-```
-
-También se puede simplificar de la siguiente manera, sin el parámetro *x*.
-
-```{r}
-mpg %>% 
-  filter(if_any(
-    c(cty, hwy),
-    ~ . > 20
-  ))
-```
-
-Filtrar filas donde "cty" y "hwy" sean mayores a 20
-
-```{r}
-mpg %>% 
-  filter(if_all(
-    c(cty, hwy),
-    ~ . > 20
-  )) 
-```
-
-
-Filtrar filas donde "cty" y "hwy" sean mayores a 20, pero menores a 30
-
-```{r}
-mpg %>% 
-  filter(if_all(
-    c(cty, hwy),
-    ~ .x > 20 & .x < 30
-  )) 
-```
-
-
 ## Información de vuelos
 
 Para los siguientes ejemplo se utilizará una base de datos que tiene información detallada sobre vuelos. Para esto, se tiene que cargar la librería `hflights`
@@ -1404,15 +1036,28 @@ Creemos una columna fecha en formato "Año-mes-día". Sin embargo, en las fechas
 df %>% select(Year,Month,DayofMonth)
 ```
 
-Por lo tanto, ocuparemos de la función `str_pad()` para realizar esta tarea, se le tiene que indicar la columna a la que se le aplicará esta función, cuántos caracteres tiene que tener cada una de las entradas de la columna, si se acompletarán los caracteres por la izquierda o derecha, y el texto con el que se completarán las entradas de la columna. Asimismo, se empleará la la función `across()` con `mutate()` para aplicar la función `str_pad()` a más de una columna a la vez.
+Por lo tanto, ocuparemos de la función `str_pad()` para realizar esta tarea, se le tiene que indicar la columna a la que se le aplicará esta función, cuántos caracteres tiene que tener cada una de las entradas de la columna, si se acompletarán los caracteres por la izquierda o derecha, y el texto con el que se completarán las entradas de la columna. Asimismo, se empleará la la función `across()` con `mutate()` para aplicar la función `str_pad()` a más de una columna a la vez. La sintaxis es la siguiente:
+
+
+```
+across(.cols, .fns, .names = NULL)
+```
+
+donde
+
+| Argumento  | Descripción                                                                                                                                   |
+|------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `.cols`    | Columnas a transformar. Puede usarse `where()`, `starts_with()`, nombres directos, etc.                                                      |
+| `.fns`     | Función o funciones a aplicar. Puede ser una función como `log`, una fórmula como `~ .x * 100`, o una lista de funciones.                    |
+| `.names`   | (Opcional) Especifica el nombre de las nuevas columnas. Usa `"col"` como plantilla, por ejemplo: `"{col}_mod"` generará `col1_mod`, etc.     |
 
 A continuación se aplican las funciones anteriormente descritas arriba para construir la columna de fechas
 
 ```{r}
 df %>%
   mutate(across(
-    .cols = c("Month","DayofMonth"), # Columnas a las que se le aplicará la función
-    .fns = ~ str_pad(.x, 2,"left", "0") # Función que se aplicará
+    .cols = c("Month","DayofMonth"),
+    .fns = ~ str_pad(.x, 2,"left", "0")
   )) %>%
   unite(
     col = "Fecha",
@@ -1507,63 +1152,18 @@ ventas_df <- ventas_df %>%
 print(ventas_df)
 ```
 
-
 # Ejercicios
 
 ## Ejercicio 1
 
 En este ejercicio utilizarás el conjunto de datos `hflights` del paquete `hflights`.
 
-```{r}
-# Se guarda la base en una variable 'df'
-df <- hflights
-head(df)
-```
-
-
 Usa `dplyr` y `tidyr` para responder las siguientes preguntas:
 
 - ¿Cuántas filas y columnas tiene la tabla `hflights`?
-
-```{r}
-# Se puede hacer con la funci[on dim
-cat("La tabla tiene ", nrow(df) ," filas y ", ncol(df) ," columnas.")
-```
-
 - ¿Cuántos aerolíneas (carriers) distintos aparecen en la tabla? (Imprime una tabla con los nombres de los aerolíneas distintos).
-
-```{r}
-# Se puede hacer con la funci[on dim
-cat("Hay ", nrow(df %>% distinct(UniqueCarrier))," aerolineas distintas.")
-
-df %>% 
-  distinct(UniqueCarrier)
-```
-
 - ¿Cuáles y cuántos aeropuertos estuvieron involucrados? ¡Considera tanto los aeropuertos de origen como los de destino!
-
-```{r}
-# Aeropuertos distintos, considerando origen y distinto
-aeropuertos <- bind_rows(
-  df %>% select(Aeropuerto = Origin),
-  df %>% select(Aeropuerto = Dest)
-) %>%
-  distinct() %>%
-  arrange(Aeropuerto)
-head(aeropuertos)
-
-cat("Estuvieron involucrados ", nrow(aeropuertos), " aeropuertos distintos.")
-```
-
 - ¿Cuántos vuelos fueron cancelados?
-
-```{r}
-cancelados <- df %>%
-  filter(Cancelled == 1)
-
-cat("Se cancelaron ", nrow(cancelados)," vuelos.")
-```
-
 
 ## Ejercicio 2
 
@@ -1579,24 +1179,6 @@ Produce una tabla con las siguientes estadísticas por aerolínea:
 - Tiempo promedio real transcurrido (en horas) por vuelo para cada aerolínea
 - Tiempo promedio en el aire (en horas) por vuelo para cada aerolínea
 
-```{r}
-# Si notamos en la tarea, todas las estad[isticas son por vuelo
-df.summary <- df %>% 
-  group_by(UniqueCarrier) %>%
-  reframe(
-    `Vuelos por aerolinea` = n_distinct(FlightNum, na.rm = TRUE),
-    `Distancia total [millas]` = sum(Distance, na.rm = TRUE),
-    `Tiempo total real [horas]` = sum(ActualElapsedTime, na.rm = TRUE) / 60,
-    `Tiempo total en aire [horas]` = sum(AirTime, na.rm = TRUE) / 60,
-    `Distancia promedio [millas]` = mean(Distance, na.rm = TRUE),
-    `Tiempo promedio real [horas]` = mean(ActualElapsedTime, na.rm = TRUE) / 60,
-    `Tiempo promedio en aire [horas]` = mean(AirTime, na.rm = TRUE) / 60,
-  )
-
-df.summary
-```
-
-
 ### Segunda parte:
 
 Calcula el porcentaje de la distancia total volada por los **3 aerolíneas con mejor desempeño** en comparación con la distancia total volada por los aerolíneas restantes. Ejecuta los siguientes pasos:
@@ -1604,125 +1186,36 @@ Calcula el porcentaje de la distancia total volada por los **3 aerolíneas con m
 1. Ordena los aerolíneas por distancia total volada.
 2. Agrupa a los 3 con mejor desempeño en un grupo, y a los demás en otro grupo.
 3. Para cada grupo, calcula la distancia total volada.
-4. Para cada grupo, calcula el porcentaje: $\text{Distancia total volada por grupo} / \text{Distancia total volada por todos los aerolíneas}$
+4. Para cada grupo, calcula el porcentaje:  
+   \[\text{Distancia total volada por grupo} / \text{Distancia total volada por todos los aerolíneas}\]
 
-```{r}
-df.summary %>%
-  arrange(desc(`Distancia total [millas]`)) %>%
-  mutate(
-    Rank = row_number(),
-    Desempeño = case_when(
-      Rank > 3 ~ "Desempeño bajo",
-      TRUE ~ "Desempeño alto"
-    )
-  ) %>%
-  group_by(Desempeño) %>%
-  mutate(
-    `Distancia total por grupo de desempeño [millas]` = sum(`Distancia total [millas]`),
-    `Distancia por grupo de desempeño %` = round(100 * `Distancia total [millas]` / `Distancia total por grupo de desempeño [millas]`,2)
-  ) %>%
-  select(
-    Rank, Desempeño,
-    `Distancia total [millas]`,
-    `Distancia total por grupo de desempeño [millas]`,
-    `Distancia por grupo de desempeño %`,
-    everything()
-  )
-```
 
-## Ejercicio 3
+# Ejercicio 3
 
 Modifica tu tabla principal de vuelos (`flights`):
 
 - Crea una columna de **fecha** uniendo las columnas: `year`, `month` y `day`.
-- Al unir las columnas, **no pierdas las columnas originales** (puedes duplicarlas con nombres ligeramente distintos antes de ejecutar `unite` o con el parámetro *remove = FALSE*).
+- Al unir las columnas, **no pierdas las columnas originales** (puedes duplicarlas con nombres ligeramente distintos antes de ejecutar `unite`).
 - Deberás **parsear** la columna de fecha después de la operación de unión.
 - También debes **agregar ceros a la izquierda** en las columnas de mes y día antes de crear la fecha.
 - Crea las columnas: **trimestre** (`quarter`) y **semana** (`week`).
 
-> 💡 **Sugerencia**: puedes usar los paquetes del `tidyverse` como `lubridate` (para manipulaciones de fecha y hora) y `stringr` (para manipulaciones con cadenas de texto). Puedes usar `lubridate` si decides no usar `lubridate`: `lubridate` y `lubridate` para obtener los trimestres y semana del año.
+> 💡 **Sugerencia**: puedes usar los paquetes del `tidyverse` como `lubridate` (para manipulaciones de fecha y hora) y `stringr` (para manipulaciones con cadenas de texto).
 
-```{r}
-library(lubridate)
-
-df.fechas <- df %>%
-  mutate(across(
-    c(Month, DayofMonth),
-    ~ str_pad(.x, width = 2, side = "left", pad = "0")
-  )) %>%
-  unite("Fecha", DayofMonth, Month, Year, sep = "/", remove = FALSE) %>%
-  mutate(
-    Fecha = dmy(Fecha),
-    Trimestre = quarter(Fecha),
-    Semana = week(Fecha)
-  )
-
-df.fechas
-```
-
-También se puede hacer mediante la función *paste()* usando *mutate()*
-
-```{r}
-df.fechas <- df %>%
-  mutate(
-    across(
-      c(Month,DayofMonth),
-      ~str_pad(.x,width = 2, side = "left", pad = "0"),
-      .names = "{.col}"
-    ),
-    Fecha = dmy(paste(DayofMonth, Month, Year, sep = "/")),
-    Trimestre = quarter(Fecha),
-    Semana = week(Fecha)
-  )
-
-df.fechas
-```
 
 Usando tu tabla modificada, intenta responder las siguientes preguntas:
 
 - ¿El número total de vuelos está aumentando o disminuyendo **trimestralmente**?
-
-```{r}
-df.fechas.trimestre <- df.fechas %>%
-  group_by(Trimestre) %>%
-  reframe(
-    `Vuelos totales` = n_distinct(FlightNum)
-  ) %>%
-  arrange(Trimestre) %>%
-  mutate(
-    `Crecimiento en vuelos %` = round(100 * (`Vuelos totales` - dplyr::lag(`Vuelos totales`, 1)) / `Vuelos totales`, 2)
-  )
-
-df.fechas.trimestre
-```
-
 - ¿La distancia total volada está aumentando o disminuyendo **mensualmente**?
-
-```{r}
-df.fechas.mensual <- df.fechas %>%
-  group_by(Month) %>%
-  reframe(
-    `Distancia total` = sum(Distance)
-  ) %>%
-  arrange(Month) %>%
-  mutate(across(
-    `Distancia total`,
-    ~round(100 * (.x - dplyr::lag(.x, 1)) / .x, 2),
-    .names = "Crecimiento en {.col} %"
-  ))
-
-df.fechas.mensual
-```
-
 - 💡 **Pista**: la función `lag()` de `dplyr` puede ayudarte a calcular las diferencias trimestrales o mensuales.
 
-## Ejercicio 4
+# Ejercicio 4
 
-La idea de este último ejercicio es una tarea de transformación de datos, en la que deberás usar una técnica llamada **pivotar**. Construye una tabla que se asemeje a un **mapa de calor** siguiendo estos pasos:
+La idea de este último ejercicio es una tarea de transformación de datos, en la que deberás usar una técnica llamada **"pivotar"**. Construye una tabla que se asemeje a un **mapa de calor** siguiendo estos pasos:
 
 - Para cada **aerolínea (carrier)** y **mes**, calcula el **número total de vuelos**.
 - Luego, **normaliza** el número total de vuelos (divide cada valor entre el número máximo de vuelos total; ¡debes obtener valores entre 0 y 1!).
-- Ahora **pivotea** tu tabla de formato **wyde**.
+- Ahora **transforma (pivot)** tu tabla de formato **largo a ancho**.
 - Cada fila debe representar una **aerolínea**, y cada columna un **mes**.
 - Los valores en las celdas serán el número **normalizado de vuelos**.
 
@@ -1736,21 +1229,4 @@ Ejemplo esperado de salida:
 | Carrier n  | xn;1   | xn;2   | ... | xn;12  |
 
 Donde `xᵢⱼ` representa el valor **normalizado** del total de vuelos para la aerolínea `i` en el mes `j`.
-
-```{r}
-df.vuelos.mes <- df %>%
-  group_by(UniqueCarrier,Month) %>%
-  reframe(
-    `Vuelos totales` = n_distinct(FlightNum)
-  ) %>%
-  mutate(
-    `Vuelos totales` = `Vuelos totales` / max(`Vuelos totales`)
-  ) %>%
-  pivot_wider(
-    names_from = Month,
-    values_from = `Vuelos totales`,
-    names_prefix = "Mes "
-  )
-
-df.vuelos.mes
-```
+.
