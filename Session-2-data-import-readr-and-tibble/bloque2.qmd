@@ -1,0 +1,441 @@
+---
+title: 'Bloque 2: Importar data, readr y tibble'
+author: "Antonio Huerta Montellano"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+Borrar todas las variables, funciones u objetos guardados en memoria.
+Asimismo, se cierran todas las ventanas abiertas de gráficas.
+
+```{r}
+rm(list = ls()) # Borra todos los objetos (variables, funciones, etc.) que hay en el entorno de trabajo actual
+# ls() enlista todos los objetos que se han creado en la sesión actual
+graphics.off() # Cierra todas las ventanas gráficas abiertas
+```
+
+El siguiente código corresponde a un chunk en el que se establecen las
+configuraciones del script, así como las librerías que importarán.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Cargar librerías
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(tibble)
+library(hflights)
+```
+
+A lo largo de esta sesión se empleará una base precargada en `R` llamada
+*mpg*. Esta base contiene datos sobre distintos modelos de automóviles
+lanzados al mercado entre el año 1999 y 2008, con la función
+`help("mpg")` se pude obtener las descripción técnica de esta base.
+
+```{r}
+# Almacenar base en otro objeto, llamado df
+df <-  mpg
+View(df) # Ver tabla
+print(df) # Imprimir tabla en consola
+str(df) # Estructura de la tabla, también sirve para ver la estructura de culaquier objeto o función en R.
+cat("Filas de la tabla: ",nrow(df),"\n") # Filas de la tabla
+cat("Columnas de la tabla: ",ncol(df)) # Columnas de la tabla
+```
+
+# 2.1 Tablas llamadas tibble
+
+Por defecto, muchas de las tablas que contiene `R` precargadas en sus paqueterías no son de tipo *tibble*, son de tipo *dataframe*. Para los siguientes ejemplos, nos apoyaremos de las tablas construidas dentro de las paqueterías de `ggplot2` y `hflights`
+
+Como algunas de estas bases contienen el mismo nombre que la librería que las almacena, se podría generar algún problema de interpretación en `R` al asumir que se refiere a la librería y no a la tabla. La solución es indicar primero la librería y luego el objeto o función que almacena.
+
+```
+nombre_de_la_librería::nombre_del_objeto/función
+```
+
+- **Economics**
+
+Visualización de la tabla
+
+```{r}
+ggplot2::economics
+```
+
+Clase que tiene asignada la tabla
+
+```{r}
+class(ggplot2::economics)
+```
+
+- **Diamonds**
+
+Visualización de la tabla
+
+```{r}
+ggplot2::diamonds
+```
+
+Clase que tiene asignada la tabla
+
+```{r}
+class(ggplot2::diamonds)
+```
+
+- **Faithfuld**
+
+Visualización de la tabla
+
+```{r}
+ggplot2::faithfuld
+```
+
+Clase que tiene asignada la tabla
+
+```{r}
+class(ggplot2::faithfuld)
+```
+
+- **hflights**
+
+Visualización de la tabla
+
+```{r}
+hflights::hflights
+```
+
+Clase que tiene asignada la tabla
+
+```{r}
+class(hflights::hflights)
+```
+
+A continuación, se describen las distintas clases de datos asignados a las tablas:
+
+- **`spec_tbl_df`**: Es una clase especial usada cuando el tibble tiene metadatos (por ejemplo, al importar con `readr::read_csv()`). Significa que es un **tibble con especificaciones**.
+
+- **`tbl_df`**: Es un **tibble clásico**. Esta es la clase principal para tibbles.
+
+- **`tbl`**: Es una clase auxiliar para métodos internos del tidyverse.
+
+- **`data.frame`**: Significa que el tibble también se comporta como un *data.frame*, para asegurar compatibilidad con funciones de base R.
+
+En los ejemplos anteriores se aprecia que todas las tablas contienen la clase *data.frame*, además de otras clases, excepto para la tabla de vuelos que tiene solo esta clase. Sin embargo, cuando se imprimen las tablas se aprecia que `R` prioriza la clase *tibble*; en el recadro superior izquierdo se muestra la clase. No obstante para la base de vuelos se muestra solo la clase *data.frame*, ya que es la única clase que posee.
+
+
+# 2.2 Crear un *tibble*
+
+Existen distintas maneras de crear una tabla de clase *tibble*, convirtiendo alguna estructura existente a esta clase de objetos o, incluso, desde cero se puede hacer.
+
+## Convirtiendo data frames en *tibble*
+
+La librería de *tibble* cuenta ya con una función para convertir estructuras de clase *data.frame* en objetos con clase *tibble* mediante la función `as_tibble()`, cuya sintaxis es la siguiente:
+
+```
+as_tibble(<nombre_del_dataframe>)
+```
+
+Para nuestro primer ejemplo consideraremos de nuevo la tabla de vuelos de la librería `hflights`. Recordemos que esta tabla solo tiene la clase de *data.frame* asiganada por defecto.
+
+```{r}
+class(hflights)
+```
+
+Ahora, la convertiremos en un objeto *tibble*, donde lo guardaremos en un objeto para realizar la conversión.
+
+```{r}
+hflights_tb <- as_tibble(hflights)
+class(hflights_tb)
+```
+
+Para nuestro nuevo ejemplo, mostramos un data frame desde cero al cual lo convertiremos en una tabla *tibble*. Para crear nuestro data frame emplearemos la función `data.frame()`, la cual acepta como columnas vectores de datos; en este caso, una secuencia numérica del 1 al 10 y una serie de tiempo diaria del primero de enero del 2025 al 10 de enero del mismo año.
+
+```{r}
+#   Convert custom data frame
+df <- data.frame(x = 1:10, 
+                 y = seq.Date(from = as.Date("2025-01-01"), 
+                              to = as.Date("2025-01-10"), 
+                              by = "day"))
+df
+```
+
+Se puede apreciar a continuación que la clase de esta tabla es *data.frame* únicamente.
+
+```{r}
+class(df)
+```
+
+Ahora, lo convertimos a un objeto con la clase *tibble* mediante la función `as_tibble()`:
+
+```{r}
+dft <- as_tibble(df)
+class(dft)
+```
+
+Visualizémoslo
+
+```{r}
+dft
+```
+
+## Creando *tibbles* desde cero
+
+También se pueden crear tabla de clase *tibble* desde cero sin la necesidad de crear un objeto de tipo *data.frame* primero. Para esto, se empleará la función `tibble()`, en la cual se indicarán los nombres y contenidos de cada columna. Se sigue la sintaxis sigueinte:
+
+```
+tibble(
+  columna1 = valores,
+  columna2 = valores,
+  ...
+  columnaN = valores
+)
+```
+
+Los valores que se pueden asociar a cada columna pueden varias; por ejemplo, secuencias numéricas, vectores con valores explícitos, alguna cosntante, operaciones con otras columnas previamente definidas, entre otras. Para nuestro primer ejemplo crearemos un *tibble* con tres columnas, donde la primera es una secuencia numéricas, la segunda un vector de longitud 1 y una tercera columna que es el producto de las primeras dos columnas. En el caso de la segunda columna, se recicla el vector de longitud 1 hasta cubrir toda la longitud restante con respecto al resto de columnas.
+
+**Nota:** Solo se pueden reciclar vectores unitarios, no vectores con alguna longitud mayor puesto que se mostrará un mensaje de error al tratar de ejecutar el código. Por ejemplo, que se trate de meter un vector `v4 = 1:9` generará un error porque no es de la misma longitud que el resto de columnas. Todas las columnas tiene que poseer la misma longitud, salvo vectores unitarios, ya que se reciclan estos.
+
+```{r}
+tibble(
+  v1 = 1:10,
+  v2 = 10,
+  v3 = v1*v2
+)
+```
+
+Para el siguiente ejemplo, se sigue una lógica similar, donde
+
+- `v1`: Vector con una secuencia numérica del 1 al 100 en pasos unitarios.
+- `v2`: Vector unitario con el valor $\pi$.
+- `v3`: Vector con las raices de los valores de la columna `v1`.
+- `v4`: Vector con las primeras 100 fechas diarias que comienzan desde el primero de enero del 2015.
+
+```{r}
+tibble(
+  v1 = seq(from = 1, to = 100, by = 1),
+  v2 = pi,
+  v3 = sqrt(v1),
+  v4 = seq.Date(
+    from = as.Date("2025-01-01"),
+    length.out = 100,
+    by = "day"
+    )
+  )
+```
+
+## Columnas con nombres no sintácticos
+
+Los data frames no aceptan nombres de columnas que no empiecen con letras o que contengan caracteres especiales. Sin embargo, las tablas de clase *tible* sí lo pueden hacer mediante las comillas invertidas  *`* (*backticks*). Cualquier texto entre comillas invertidas será aceptado como un nombre válido para las columnas.
+
+**Nota**: Para hacer referencias a estas columnas de forma explícita, se tiene que usar las comillas invertidas para que el código compile.
+
+```{r}
+tibble(
+  `123` = 123,
+  `.` = "period",
+  `,` = "comma",
+  `,*/-+?!` = "strange name"
+)
+```
+
+## *tibble* transpuestos
+
+A veces, puede ser más útil llenar una tabla por renglones y no por vectores como lo hemos hecho hasta ahora. En estos casos se puede usar la función `tribble()` para llenar de forma horizontal la tabla. La sintaxis es la siguiente
+
+```
+tribble(
+  ~encabezado1, ~encabezado2, ... ~encabezadoN, # Encabezados
+  valor, valor, ... valor,
+  ...
+  valor, valor, ... valor
+)
+```
+
+La primera línea corresponde al nombre que llevarán las columnas, es decir, los encabezados. Las mismas reglas para crear columnas con datos consistentes se aplican aquí.
+
+Para nuestro primer ejemplo, crearemos un *tribble* con los datos de distintos empleados con su nombre, edad y ciudad,
+
+```{r}
+tribble(
+  ~nombre,    ~edad, ~ciudad, # Encabezado
+  "Ana",         30, "CDMX",
+  "Luis",        25, "Guadalajara",
+  "María",       40, "Monterrey"
+)
+```
+
+
+# 2.3 Diferencias con data frames
+
+Se pueden extraer columnas de tabla con clase *data.frame* mediante la siugiente sintaxis:
+
+- `dataframe$nombre_de_la_columna`
+- `dataframe["nombre_de_la_columna"]`
+- `dataframe[n]`
+
+Sin embargo, el objeto que regresa no es de clase *data.frame*, sino un vector.
+
+```{r}
+#   Extract by name - $
+print(class(mpg$manufacturer))
+
+#   Extract by name - [[]]
+print(class(mpg[["manufacturer"]]))
+
+#   Extract by position - [[]]
+print(class(mpg[[1]]))
+```
+
+Incluso, siguiendo la sintaxis con el operador pivotal *%>%* se obtiene la misma clase de objetos.
+
+En este caso, el punto, *.*, significa que *considere los datos que están antes* del operador pivotal.
+
+```{r}
+print(class(mpg %>% .$manufacturer))
+print(class(mpg %>% .[["manufacturer"]]))
+print(class(mpg %>% .[[1]]))
+```
+
+Con *tibble* esto no pasa puesto que las columnas que regresa son de tipo *tibble*.
+
+```{r}
+print(class(mpg %>% select(manufacturer)))
+```
+
+
+# 2.5 Importar datos con *readr*
+
+```{r}
+library(readr)
+```
+
+
+Importar datos a `R` es uno de las etapas más cruciales en los análisis de datos. **Tidyverse** proporciona una librería llamada **readr**, la cual contiene funciones para importar datos rectangulares (en formato tabular o archivos planos).
+
+- Un archivo rectangular es aquel en el que los datos están organizados en filas y columnas, como si fuera una tabla. Cada fila representa una observación (registro), y cada columna representa una variable (atributo). Se llama *rectangular* porque forma una especie de matriz de datos: todas las filas tienen el mismo número de columnas. Por **datos rectangulares** nos referimos a archivos planos como:
+
+  - `.csv` (archivos delimitados por comas)
+  - `.tsv` (archivos delimitados por tabulaciones)
+  - `.fsv` (archivos de ancho fijo)
+  - `.txt`, entre otros.
+
+Un archivo plano (en inglés flat file) es un término más amplio. Se refiere a cualquier archivo de texto que no contiene estructuras jerárquicas o anidadas, y normalmente:
+
+- Almacena una sola tabla (no múltiples relaciones como en una base de datos).
+- No tiene formato binario (es legible por humanos).
+- Usa algún delimitador para separar campos (como `,`, `\t`, `;` o espacios)
+
+Todos los archivos rectangulares son archivos planos, pero no todos los archivos planos son rectangulares. Por ejemplo, un archivo `.txt` con una lista desordenada de nombres o números no es rectangular, pero sí es plano.
+
+Hay varias razones por las cuales `readr` es preferible sobre las funciones base de R:
+
+- **Velocidad**: Las funciones de `readr` son mucho más rápidas (hasta 10 veces más) que las funciones base de R.
+- **Tibbles**: Las funciones de `readr` producen tibbles directamente al importar datos.
+  - No convierten vectores de caracteres en factores automáticamente.
+  - Evitan frustraciones comunes al importar archivos.
+- **Reproducibilidad**: 
+  - Las funciones base de R pueden heredar comportamientos del sistema operativo de tu computadora, lo cual puede causar problemas de compatibilidad al ejecutar el mismo código en otras PCs.
+  - Las herramientas de `readr` buscan evitar ese comportamiento, facilitando la reproducibilidad del análisis.
+  
+La sintaxis general que siguen la mayoría de las funciones de importación de datos es la siguiente:
+
+```
+read_csv(
+  file,                       # Ruta al archivo
+  col_names = TRUE,           # ¿El archivo tiene encabezado?
+  col_types = NULL,           # Tipos de columnas (para parseo)
+  locale = default_locale(),  # Configuraciones regionales (como zona horaria)
+  na = c("", "NA"),           # Valores que se considerarán NA
+  quoted_na = TRUE,           # ¿Los NA están entre comillas?
+  quote = "\"",               # Caracter utilizado para comillas
+  comment = "",               # Prefijo de comentarios (líneas a ignorar)
+  trim_ws = TRUE,             # ¿Recortar espacios al inicio/final?
+  skip = 0,                   # Número de líneas a saltar antes de leer
+  n_max = Inf,                # Número máximo de registros a leer
+  guess_max = min(1000, n_max),  # Máximo de registros para adivinar tipos
+  progress = show_progress(),    # ¿Mostrar barra de progreso?
+  skip_empty_rows = TRUE      # ¿Omitir filas vacías?
+)
+```
+
+## Importar archivod *inline*
+
+Leer un *archivo inline* en R (por ejemplo con `readr::read_csv()`) se refiere a escribir directamente el contenido de un archivo dentro del código en forma de texto multilínea, en lugar de cargarlo desde un archivo externo como `.csv` o `.txt`.
+
+Es útil en los siguientes casos:
+
+- Para probar funciones rápidamente
+- Para ejemplos en tutoriales
+- Para documentación reproducible en `R/Quarto/RMarkdown`
+
+En la práctica, se refiere a cuando ponemos explícitamente los valores del contenido de la tabla o datos que se van a leer con la función de lectura. Se tiene que tomar en cuenta que la consistencia entre los datos que almacenará cada columna o las dimensiones, ya que presenta la misma lógica que en subsecciones anteriores, si es que no se quiere obtener errores al leer las tablas.
+
+A continuación se dan algunos ejemplos, donde las tablas siempre estarán entre comillas dobles o simples para la sintaxis.
+
+- Leer un archivo inline csv:
+
+```{r}
+read_csv(
+  "c1,c2,c3
+  1,a,T
+  2,b,T
+  3,c,F"
+)
+```
+
+- Leer un archivo inline csv con metadatos al inicio: A veces, las tablas que se queiren leer contienen al principio líneas en blanco, con comentarios, fechas, títulos o metadatos no estructurados y que lo que realmente nos importa leer se encuentra en las líneas posteriores. En estos casos, podemos omitir estas líneas de la lectura al saltárnoslas con el parámetro `skip = número_de_lineas_a_saltar`. En nuestro ejemplo contiene las primeras dos líneas con información no estructurada en alguna tabla por lo que nos saltaremos esas filas de la lectura.
+
+```{r}
+read_csv(
+  "Primer línea con metadatos
+  Segunda línea con metadatos
+  c1,c2,c3
+  1,a,T,
+  2,b,T,
+  3,c,F",
+  skip = 2
+)
+```
+
+Veamos que nose lee apropiadamente cuando no se saltan las líneas.
+
+```{r}
+read_csv(
+  "Primer línea con metadatos
+  Segunda línea con metadatos
+  c1,c2,c3
+  1,a,T
+  2,b,T
+  3,c,F"
+)
+```
+
+Sin embargo, con el parámetro `skip` solo se pueden omitir filas que estén al principio del archivo, es decir, antes de la tabla de datos que queremos leer, no puede saltar filas que estén después de la primera fila que leemos de datos. Por ejemplo, que leer la primera fila y luego saltar las sigueintes cuatro para después leer todas las filas posteriores no se puede hacer con este parámetro.
+
+- Leer un archivo con comentarios: A veces, las tablas pueden tener comentarios junto a cualquiera de los valores que conforman su contenido o encabezados, pero que no forman parte de ninguna línea de metadatos, por lo que no podemos omitirlas o saltarlas de la lecturas. Entonces, con el parámetro `comment = caracter_que_determina_el_inicio_de_un_comentario` podemos indicar qué caracter define el comienzo de un comentario dentro de nuestra tabla de datos. Por ejemplo, la siguiente tabla contiene comentarios definidos por la almohadilla "#".
+
+```{r}
+read_csv(
+  "c1,c2,c3 # comentario
+  1,a,T   # comentario
+  2,b,T
+  3,c,F",
+  comment = "#"
+)
+```
+
+Cuando no se indican los caracteres que definen el comienzo de algún comentario, `R` intentar leer esos valores como parte de la tabla
+
+```{r}
+read_csv(
+  "c1,c2,c3 # comentario
+  1,a,T   # comentario
+  2,b,T
+  3,c,F"
+)
+```
+
+Una limitación de este parámetro es que solo acepta un caracter a la vez, es decir, no podemos darle un vector con caracteres que indiquen inicios de comentariso. Por ejemplo, un vector `c("#","\\")` así no podría funcionar para ignorar esos comentarios de la lectura de datos, solo tomaría en cuenta la primera entrada del vector, pero no el resto.
